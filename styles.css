@@ -31,7 +31,7 @@ body {
   color: var(--ink);
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   letter-spacing: 0;
-  touch-action: none;
+  touch-action: manipulation;
   user-select: none;
 }
 
@@ -50,6 +50,7 @@ button {
 #game {
   display: block;
   background: var(--paper);
+  touch-action: none;
 }
 
 .hud {
@@ -1095,7 +1096,7 @@ button {
   gap: 22px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1332,8 +1333,20 @@ button {
 }
 
 .pause-panel {
-  width: min(520px, calc(100vw - 48px));
+  inset: 0;
+  width: 100%;
+  height: 100%;
   min-height: 0;
+  max-height: 100%;
+  padding: calc(28px + var(--safe-top)) calc(32px + var(--safe-right)) calc(30px + var(--safe-bottom)) calc(32px + var(--safe-left));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: none;
+  -webkit-overflow-scrolling: touch;
+  border: 0;
+  transform: none;
+  box-shadow: none;
 }
 
 .pause-heading {
@@ -1699,14 +1712,39 @@ button {
 }
 
 .pause-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   padding-top: 24px;
+  border-top: 1px solid var(--ink);
 }
 
-.pause-actions button,
 .confirm-actions button {
   width: 100%;
 }
 
+.pause-action-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pause-action-button:active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.restart-confirm-panel,
 .exit-confirm-panel {
   width: min(460px, calc(100vw - 48px));
   min-height: 0;
@@ -1719,6 +1757,55 @@ button {
 
 .danger-button {
   background: var(--accent);
+}
+
+.audio-gate-panel {
+  z-index: 30;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(36px + var(--safe-top)) calc(10vw + var(--safe-right)) calc(36px + var(--safe-bottom)) calc(10vw + var(--safe-left));
+  border: 0;
+  transform: none;
+  box-shadow: none;
+}
+
+.audio-gate-panel[hidden] {
+  display: none;
+}
+
+.audio-gate-progress {
+  width: min(420px, 100%);
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.audio-gate-progress span {
+  display: block;
+  width: 42%;
+  height: 100%;
+  background: var(--accent);
+  animation: audio-gate-scan 900ms ease-in-out infinite alternate;
+}
+
+.audio-gate-panel.is-failed .audio-gate-progress {
+  display: none;
+}
+
+.audio-gate-panel .confirm-actions {
+  width: min(420px, 100%);
+  margin-top: 18px;
+}
+
+@keyframes audio-gate-scan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(240%); }
 }
 
 @media (min-width: 1000px) and (min-height: 600px) {
@@ -1870,8 +1957,14 @@ button {
   }
 
   .pause-panel,
+  .restart-confirm-panel,
   .exit-confirm-panel {
     width: min(520px, calc(100vw - 36px));
+  }
+
+  .pause-panel {
+    width: 100%;
+    padding: calc(18px + var(--safe-top)) calc(22px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(22px + var(--safe-left));
   }
 
   .pause-heading {
@@ -1898,7 +1991,7 @@ button {
     padding: 10px 0;
   }
 
-  .pause-actions button,
+  .pause-action-button,
   .confirm-actions button {
     min-height: 40px;
   }

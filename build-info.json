@@ -1,27 +1,28 @@
 {
-  "build": "local-20260719-audio-reliability-8",
+  "build": "local-20260719-mobile-pause-audio-9",
   "publishedAs": "github-pages-main",
   "title": "回膛：磁弹猎人",
   "stage": "Graybox prototype / Gate 2 fail pending real WeChat retest",
   "runSeconds": 180,
   "sha256": {
-    "index.html": "7D399A249A064999057EC9FED36A3D0D991F1D6BCF4056E0B55C022E6308ED95",
-    "styles.css": "6EABE1A124675F2BE474A35425FBCF1C8186B28AFC2EADECE631CF4B7D106179",
-    "game.js": "A468F85C4E51E97089FB43DECF066475EAE2C97A011A171AB7AB9A4A4D1F1BAF",
+    "index.html": "053627D48C067C45C972BCDF262B2564F13B47B5AEE77C3AA89DB36C131CCDD3",
+    "styles.css": "22279C3B9D18D45FE29503B2D2DD2AA513CE7F94DC271CB64FDF541DCBA17D51",
+    "game.js": "10FC5C8441A370167113E2E2CB2E126001A8F0F289DF434F06D2B0B500B167F8",
     "critical_audio.js": "848343850EC7389ED5CD1573D6B29D0693890A4E018E90D3CAFEC7855E0C977E",
     "core_music.js": "E0E66AA8836D465D3F62D229CFF89690305A5832747C9E2F618D2ACDEB9E41B1"
   },
   "features": {
     "wechatVirtualLandscape": true,
     "mobileEntryButtonPinned": true,
-    "musicMp3PayloadReduction": true,
-    "priorityAudioPriming": true,
-    "primedResourceCount": 17,
+    "fullScreenPauseSurface": true,
+    "rotatedTouchScrollMapping": true,
+    "equalPauseActionRow": true,
+    "restartConfirmation": true,
+    "restartKeepsWeapon": true,
+    "combatAudioReadinessGate": true,
+    "audioFailureRetry": true,
     "embeddedCriticalSfx": true,
-    "musicProgressWatchdog": true,
     "embeddedCoreMusic": true,
-    "musicPlaybackRetry": true,
-    "audioLifecycleDiagnostics": true,
-    "audioReliabilityStressTest": true
+    "audioLifecycleDiagnostics": true
   }
 }

@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0c1014">
-  <meta name="app-build" content="local-20260719-audio-reliability-8">
+  <meta name="app-build" content="local-20260719-mobile-pause-audio-9">
   <title>回膛：磁弹猎人</title>
-  <link rel="stylesheet" href="styles.css?v=local-20260719-audio-reliability-8">
+  <link rel="stylesheet" href="styles.css?v=local-20260719-mobile-pause-audio-9">
 </head>
 <body>
   <main id="game-shell" class="is-start-screen" aria-label="回膛：磁弹猎人">
@@ -223,8 +223,19 @@
         <div id="pause-upgrade-list" class="run-upgrades"></div>
       </div>
       <div class="pause-actions">
-        <button id="resume-button" class="primary-button" type="button">继续游戏</button>
-        <button id="exit-run-button" class="secondary-button" type="button">退出本局</button>
+        <button id="resume-button" class="pause-action-button" type="button">继续</button>
+        <button id="restart-run-button" class="pause-action-button" type="button">重来</button>
+        <button id="exit-run-button" class="pause-action-button" type="button">退出</button>
+      </div>
+    </section>
+
+    <section id="restart-confirm-panel" class="panel restart-confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="restart-confirm-title" aria-describedby="restart-confirm-description" hidden>
+      <p class="panel-index">重来</p>
+      <h2 id="restart-confirm-title">重新开始本局？</h2>
+      <p id="restart-confirm-description">保留当前武器，清空本局升级和战斗进度。</p>
+      <div class="confirm-actions">
+        <button id="cancel-restart-button" class="secondary-button" type="button">取消</button>
+        <button id="confirm-restart-button" class="primary-button danger-button" type="button">确认重来</button>
       </div>
     </section>
 
@@ -238,9 +249,20 @@
       </div>
     </section>
 
+    <section id="audio-gate-panel" class="panel audio-gate-panel" role="dialog" aria-modal="true" aria-labelledby="audio-gate-title" aria-describedby="audio-gate-description" hidden>
+      <p class="panel-index">声音准备</p>
+      <h2 id="audio-gate-title">正在准备声音</h2>
+      <p id="audio-gate-description">核心音乐和音效就绪后将自动进入战斗。</p>
+      <div id="audio-gate-progress" class="audio-gate-progress" aria-hidden="true"><span></span></div>
+      <div id="audio-gate-actions" class="confirm-actions" hidden>
+        <button id="cancel-audio-gate-button" class="secondary-button" type="button">返回选枪</button>
+        <button id="retry-audio-button" class="primary-button" type="button">重试声音</button>
+      </div>
+    </section>
+
   </main>
-  <script src="core_music.js?v=local-20260719-audio-reliability-8"></script>
-  <script src="critical_audio.js?v=local-20260719-audio-reliability-8"></script>
-  <script src="game.js?v=local-20260719-audio-reliability-8"></script>
+  <script src="core_music.js?v=local-20260719-mobile-pause-audio-9"></script>
+  <script src="critical_audio.js?v=local-20260719-mobile-pause-audio-9"></script>
+  <script src="game.js?v=local-20260719-mobile-pause-audio-9"></script>
 </body>
 </html>

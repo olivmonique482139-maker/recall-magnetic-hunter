@@ -37,10 +37,20 @@
   const musicVolumeValue = document.querySelector("#music-volume-value");
   const sfxVolume = document.querySelector("#sfx-volume");
   const sfxVolumeValue = document.querySelector("#sfx-volume-value");
+  const restartRunButton = document.querySelector("#restart-run-button");
+  const restartConfirmPanel = document.querySelector("#restart-confirm-panel");
+  const cancelRestartButton = document.querySelector("#cancel-restart-button");
+  const confirmRestartButton = document.querySelector("#confirm-restart-button");
   const exitRunButton = document.querySelector("#exit-run-button");
   const exitConfirmPanel = document.querySelector("#exit-confirm-panel");
   const cancelExitButton = document.querySelector("#cancel-exit-button");
   const confirmExitButton = document.querySelector("#confirm-exit-button");
+  const audioGatePanel = document.querySelector("#audio-gate-panel");
+  const audioGateTitle = document.querySelector("#audio-gate-title");
+  const audioGateDescription = document.querySelector("#audio-gate-description");
+  const audioGateActions = document.querySelector("#audio-gate-actions");
+  const cancelAudioGateButton = document.querySelector("#cancel-audio-gate-button");
+  const retryAudioButton = document.querySelector("#retry-audio-button");
   const pauseUpgradeList = document.querySelector("#pause-upgrade-list");
   const upgradeScreen = document.querySelector("#upgrade-screen");
   const upgradeTimeLabel = document.querySelector("#upgrade-time-label");
@@ -655,7 +665,7 @@
     const audio = new Audio(resolveAudioSource(track.src));
     audio.__debugSource = track.src;
     audio.loop = track.loop;
-    audio.preload = id === "selection" ? "auto" : "none";
+    audio.preload = id === "selection" || id === "combat" ? "auto" : "none";
     audio.playsInline = true;
     return [id, audio];
   }));
@@ -671,7 +681,10 @@
   let musicStallRecoveryCount = 0;
   const MAX_MUSIC_RETRIES = 3;
   const MAX_MUSIC_STALL_RECOVERIES = 2;
+  const COMBAT_AUDIO_GATE_TIMEOUT_MS = 4500;
   const musicRetryDelays = [250, 750, 1500];
+  let combatAudioGateToken = 0;
+  let pendingStartWeaponId = null;
   const audioDiagnostics = {
     assetsPrimed: false,
     primedSourceCount: 0,
@@ -681,6 +694,10 @@
     musicRetries: 0,
     musicStallRecoveries: 0,
     lastMusicFailure: null,
+    combatGateAttempts: 0,
+    combatGateSuccesses: 0,
+    combatGateFailures: 0,
+    lastCombatGateReadyMs: null,
     sfxPlayFailures: 0,
     sfxPlayAborts: 0,
     lastSfxFailure: null
@@ -722,6 +739,7 @@
     y: 0
   };
   const aimState = { active: false, pointerId: null, originX: 0, originY: 0, x: 0, y: 0 };
+  const pauseScrollState = { active: false, pointerId: null, x: 0, y: 0, scrollTop: 0 };
   const player = {
     x: width / 2,
     y: height / 2,
@@ -803,6 +821,8 @@
   }
 
   function showWeaponSelection() {
+    combatAudioGateToken += 1;
+    pendingStartWeaponId = null;
     stopUpgradePreviewVideo();
     stopAllSfx();
     running = false;
@@ -811,7 +831,9 @@
     startPanel.hidden = true;
     resultPanel.hidden = true;
     pausePanel.hidden = true;
+    restartConfirmPanel.hidden = true;
     exitConfirmPanel.hidden = true;
+    audioGatePanel.hidden = true;
     upgradeScreen.hidden = true;
     upgradeDetailScreen.hidden = true;
     recordsScreen.hidden = true;
@@ -830,6 +852,8 @@
   }
 
   function showStartPanel() {
+    combatAudioGateToken += 1;
+    pendingStartWeaponId = null;
     stopUpgradePreviewVideo();
     stopAllSfx();
     running = false;
@@ -838,7 +862,9 @@
     weaponDetailScreen.hidden = true;
     resultPanel.hidden = true;
     pausePanel.hidden = true;
+    restartConfirmPanel.hidden = true;
     exitConfirmPanel.hidden = true;
+    audioGatePanel.hidden = true;
     upgradeScreen.hidden = true;
     upgradeDetailScreen.hidden = true;
     recordsScreen.hidden = true;
@@ -1264,6 +1290,84 @@
     void resumeCurrentMusic("trusted-gesture");
   }
 
+  function resetAudioGatePresentation() {
+    audioGatePanel.classList.remove("is-failed");
+    audioGateTitle.textContent = "正在准备声音";
+    audioGateDescription.textContent = "核心音乐和音效就绪后将自动进入战斗。";
+    audioGateActions.hidden = true;
+  }
+
+  function showAudioGateFailure() {
+    audioGatePanel.hidden = false;
+    audioGatePanel.classList.add("is-failed");
+    audioGateTitle.textContent = "声音没有启动";
+    audioGateDescription.textContent = "微信暂时没有启动音频。请点击重试，声音正常后再进入战斗。";
+    audioGateActions.hidden = false;
+    retryAudioButton.focus();
+  }
+
+  function waitForCombatAudioProgress(token, startedAt) {
+    const audio = musicPlayers.combat;
+    const initialTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+    return new Promise((resolve) => {
+      let settled = false;
+      let animationFrame = null;
+      const finish = (ready) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        if (animationFrame !== null) cancelAnimationFrame(animationFrame);
+        resolve(ready);
+      };
+      const check = () => {
+        if (token !== combatAudioGateToken) {
+          finish(false);
+          return;
+        }
+        const progressed = !audio.paused
+          && audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+          && audio.currentTime > initialTime + 0.025;
+        if (progressed) {
+          audioDiagnostics.lastCombatGateReadyMs = Math.round(performance.now() - startedAt);
+          finish(true);
+          return;
+        }
+        animationFrame = requestAnimationFrame(check);
+      };
+      const timeoutId = window.setTimeout(() => finish(false), COMBAT_AUDIO_GATE_TIMEOUT_MS);
+      check();
+    });
+  }
+
+  async function prepareCombatAudioAndStart() {
+    if (!pendingStartWeaponId) return;
+    const token = ++combatAudioGateToken;
+    const startedAt = performance.now();
+    audioDiagnostics.combatGateAttempts += 1;
+    resetAudioGatePresentation();
+    const revealTimer = window.setTimeout(() => {
+      if (token === combatAudioGateToken && pendingStartWeaponId) audioGatePanel.hidden = false;
+    }, 140);
+
+    primeAudioAssets();
+    musicUnlocked = true;
+    playMusicState("combat", true);
+    const ready = await waitForCombatAudioProgress(token, startedAt);
+    window.clearTimeout(revealTimer);
+    if (token !== combatAudioGateToken || !pendingStartWeaponId) return;
+    if (!ready) {
+      audioDiagnostics.combatGateFailures += 1;
+      showAudioGateFailure();
+      return;
+    }
+
+    audioDiagnostics.combatGateSuccesses += 1;
+    selectedWeaponId = pendingStartWeaponId;
+    pendingStartWeaponId = null;
+    audioGatePanel.hidden = true;
+    startGame(true);
+  }
+
   function readPersonalRecords() {
     try {
       const parsed = JSON.parse(localStorage.getItem(RECORDS_STORAGE_KEY) || "{}");
@@ -1565,9 +1669,12 @@
   }
 
   function startWithWeapon(weaponId) {
+    if (pendingStartWeaponId) return;
     selectedWeaponId = weaponId;
+    pendingStartWeaponId = weaponId;
     localStorage.setItem("lastWeaponId", selectedWeaponId);
-    startGame();
+    stopAllSfx();
+    void prepareCombatAudioAndStart();
   }
 
   function drawPreviewGrid() {
@@ -4868,22 +4975,26 @@
     upgradeLabel.textContent = "本局升级";
     resultUpgrades.prepend(upgradeLabel);
     pausePanel.hidden = true;
+    restartConfirmPanel.hidden = true;
     exitConfirmPanel.hidden = true;
+    audioGatePanel.hidden = true;
     resultPanel.hidden = false;
     if (victory) playMusicState("victory", true);
     else playMusicState("results", true);
     updateHud();
   }
 
-  function startGame() {
+  function startGame(combatAudioAlreadyPlaying = false) {
     resetGame();
     stopUpgradePreviewVideo();
-    stopAllSfx();
+    if (!combatAudioAlreadyPlaying) stopAllSfx();
     setStartScreenActive(false);
     startPanel.hidden = true;
     resultPanel.hidden = true;
     pausePanel.hidden = true;
+    restartConfirmPanel.hidden = true;
     exitConfirmPanel.hidden = true;
+    audioGatePanel.hidden = true;
     weaponSelectScreen.hidden = true;
     weaponDetailScreen.hidden = true;
     recordsScreen.hidden = true;
@@ -4891,7 +5002,7 @@
     upgradeDetailScreen.hidden = true;
     running = true;
     lastTime = performance.now();
-    playMusicState("combat", true);
+    if (!combatAudioAlreadyPlaying) playMusicState("combat", true);
     updateHud();
   }
 
@@ -4903,9 +5014,11 @@
       releaseAimJoystick(null, true);
     }
     pausePanel.hidden = !paused;
+    restartConfirmPanel.hidden = true;
     exitConfirmPanel.hidden = true;
     if (paused) {
       renderUpgradeChips(pauseUpgradeList);
+      pausePanel.scrollTop = 0;
       pauseAllMusic();
       stopAllSfx();
     }
@@ -4916,9 +5029,33 @@
     updateHud();
   }
 
+  function showRestartConfirmation() {
+    if (!running || !paused || finished) return;
+    pausePanel.hidden = true;
+    restartConfirmPanel.hidden = false;
+    confirmRestartButton.focus();
+  }
+
+  function closeRestartConfirmation() {
+    if (restartConfirmPanel.hidden) return;
+    restartConfirmPanel.hidden = true;
+    pausePanel.hidden = false;
+    restartRunButton.focus();
+  }
+
+  function restartCurrentRun() {
+    if (!running || !paused || finished) return false;
+    keys.clear();
+    releaseJoystick();
+    releaseAimJoystick(null, true);
+    startGame();
+    return true;
+  }
+
   function showExitConfirmation() {
     if (!running || !paused || finished) return;
     pausePanel.hidden = true;
+    restartConfirmPanel.hidden = true;
     exitConfirmPanel.hidden = false;
     confirmExitButton.focus();
   }
@@ -4937,7 +5074,7 @@
     running = false;
     paused = false;
     resetGame();
-    showStartPanel();
+    showWeaponSelection();
   }
 
   function frame(now) {
@@ -5090,6 +5227,34 @@
     releaseAimJoystick(event, true);
   });
 
+  pausePanel.addEventListener("pointerdown", (event) => {
+    if (!paused || event.pointerType === "mouse" || event.target.closest("button, input, output, label")) return;
+    pauseScrollState.active = true;
+    pauseScrollState.pointerId = event.pointerId;
+    pauseScrollState.x = event.clientX;
+    pauseScrollState.y = event.clientY;
+    pauseScrollState.scrollTop = pausePanel.scrollTop;
+    try {
+      pausePanel.setPointerCapture(event.pointerId);
+    } catch {}
+    event.preventDefault();
+  });
+  pausePanel.addEventListener("pointermove", (event) => {
+    if (!pauseScrollState.active || event.pointerId !== pauseScrollState.pointerId) return;
+    const dx = event.clientX - pauseScrollState.x;
+    const dy = event.clientY - pauseScrollState.y;
+    const scrollDelta = virtualLandscapeActive && Math.abs(dx) > Math.abs(dy) ? dx : -dy;
+    pausePanel.scrollTop = pauseScrollState.scrollTop + scrollDelta;
+    event.preventDefault();
+  });
+  const releasePauseScroll = (event) => {
+    if (!pauseScrollState.active || event.pointerId !== pauseScrollState.pointerId) return;
+    pauseScrollState.active = false;
+    pauseScrollState.pointerId = null;
+  };
+  pausePanel.addEventListener("pointerup", releasePauseScroll);
+  pausePanel.addEventListener("pointercancel", releasePauseScroll);
+
   window.addEventListener("keydown", (event) => {
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) event.preventDefault();
     keys.add(event.code);
@@ -5104,7 +5269,10 @@
     }
     if (event.code === "Escape" && running && !event.repeat) {
       event.preventDefault();
-      if (!exitConfirmPanel.hidden) {
+      if (!restartConfirmPanel.hidden) {
+        closeRestartConfirmation();
+        playUiSfx("uiBack");
+      } else if (!exitConfirmPanel.hidden) {
         closeExitConfirmation();
         playUiSfx("uiBack");
       } else if (paused) {
@@ -5182,6 +5350,16 @@
   });
   musicVolume.addEventListener("input", () => setMusicVolume(musicVolume.value));
   sfxVolume.addEventListener("input", () => setSfxVolume(sfxVolume.value));
+  restartRunButton.addEventListener("click", showRestartConfirmation);
+  cancelRestartButton.addEventListener("click", () => {
+    const wasOpen = !restartConfirmPanel.hidden;
+    closeRestartConfirmation();
+    if (wasOpen && restartConfirmPanel.hidden) playUiSfx("uiBack");
+  });
+  confirmRestartButton.addEventListener("click", () => {
+    const restarted = restartCurrentRun();
+    if (restarted) playUiSfx("uiStart");
+  });
   exitRunButton.addEventListener("click", showExitConfirmation);
   cancelExitButton.addEventListener("click", () => {
     const wasOpen = !exitConfirmPanel.hidden;
@@ -5192,6 +5370,17 @@
     const canExit = running && paused && !finished;
     exitCurrentRun();
     if (canExit && !running) playUiSfx("uiExit");
+  });
+  cancelAudioGateButton.addEventListener("click", () => {
+    combatAudioGateToken += 1;
+    pendingStartWeaponId = null;
+    showWeaponSelection();
+    playUiSfx("uiBack");
+  });
+  retryAudioButton.addEventListener("click", () => {
+    resetAudioGatePresentation();
+    playUiSfx("uiStart");
+    void prepareCombatAudioAndStart();
   });
   upgradeDetailBack.addEventListener("click", () => {
     const wasOpen = !upgradeDetailScreen.hidden;
@@ -5435,7 +5624,13 @@
           }
         },
         running,
+        paused,
         finished,
+        audioGate: {
+          visible: !audioGatePanel.hidden,
+          failed: audioGatePanel.classList.contains("is-failed"),
+          pendingWeaponId: pendingStartWeaponId
+        },
         phaseIndex: PRESSURE_PHASES.indexOf(getPressurePhase()),
         enemyCounts,
         enemyModes,
@@ -5600,6 +5795,7 @@
   resetGame();
   setMusicVolume(readMusicVolume(), false);
   setSfxVolume(readSfxVolume(), false);
+  primeAudioAssets();
   renderWeaponList();
   resize();
   if (startUiDemoMode) {
