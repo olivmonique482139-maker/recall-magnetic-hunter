@@ -901,11 +901,11 @@
       if (audio.networkState === HTMLMediaElement.NETWORK_EMPTY) audio.load();
     });
     const sources = [
-      UI_SFX_TRACKS.uiStart[0],
-      UI_SFX_TRACKS.uiWeaponSelect[0],
-      SFX_TRACKS.shot[0],
-      SFX_TRACKS.recallStart[0],
-      SFX_TRACKS.impactEnemy[0]
+      ...UI_SFX_TRACKS.uiStart,
+      ...UI_SFX_TRACKS.uiWeaponSelect,
+      ...SFX_TRACKS.shot,
+      ...SFX_TRACKS.recallStart,
+      ...SFX_TRACKS.impactEnemy
     ];
     Array.from(new Set(sources)).forEach((source) => {
       const audio = new Audio(source);
