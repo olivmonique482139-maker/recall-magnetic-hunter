@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0c1014">
+  <meta name="app-build" content="local-20260719-mobile-entry-2">
+  <title>回膛：磁弹猎人</title>
+  <link rel="stylesheet" href="styles.css?v=local-20260719-mobile-entry-2">
+</head>
+<body>
+  <main id="game-shell" class="is-start-screen" aria-label="回膛：磁弹猎人">
+    <canvas id="game" aria-label="游戏战场"></canvas>
+
+    <section class="hud" aria-label="战斗状态">
+      <div class="health-block">
+        <span class="hud-label">生命</span>
+        <div class="health-track" aria-hidden="true">
+          <div id="health-fill" class="health-fill"></div>
+        </div>
+        <span id="health-value" class="hud-value">100</span>
+      </div>
+
+      <div class="ammo-block">
+        <span class="hud-label">弹仓</span>
+        <div id="ammo-pips" class="ammo-pips" aria-label="6发子弹状态"></div>
+        <span id="field-status" class="field-status">落地 0 · 满蓄 0</span>
+      </div>
+
+      <div class="run-block">
+        <span id="timer" class="timer">03:00</span>
+        <button id="pause-button" class="icon-button" type="button" aria-label="暂停" title="暂停">
+          <span></span><span></span>
+        </button>
+      </div>
+    </section>
+
+    <div id="joystick" class="joystick is-hidden" aria-hidden="true">
+      <div id="joystick-knob" class="joystick-knob"></div>
+    </div>
+
+    <div id="aim-joystick" class="aim-joystick is-hidden" aria-hidden="true">
+      <div id="aim-joystick-knob" class="aim-joystick-knob"></div>
+    </div>
+
+    <button id="recall-button" class="recall-button" type="button" disabled>
+      <span class="recall-mark" aria-hidden="true"></span>
+      <span>回收</span>
+      <strong id="recall-count">0</strong>
+    </button>
+
+    <section id="start-panel" class="start-screen is-entering" aria-label="游戏开始界面">
+      <div class="start-bg" aria-hidden="true">
+        <span class="start-structure start-structure-top"></span>
+        <span class="start-structure start-structure-floor"></span>
+        <span class="start-pressure start-pressure-a"></span>
+        <span class="start-pressure start-pressure-b"></span>
+      </div>
+
+      <div class="start-layout">
+        <div class="start-copy">
+          <header class="start-brand" aria-label="回膛：磁弹猎人">
+            <h1>回膛</h1>
+            <p>磁弹猎人</p>
+            <span class="start-brand-rule" aria-hidden="true"></span>
+          </header>
+
+          <div class="start-actions">
+            <button id="start-button" class="start-primary-button" type="button">开始游戏</button>
+            <button id="records-button" class="start-secondary-button" type="button">个人记录</button>
+          </div>
+        </div>
+
+        <div class="start-recall-scene" aria-hidden="true">
+          <div class="start-rail-frame"></div>
+
+          <span class="start-trail start-trail-1"></span>
+          <span class="start-trail start-trail-2"></span>
+          <span class="start-trail start-trail-3"></span>
+          <span class="start-trail start-trail-4"></span>
+          <span class="start-trail start-trail-5"></span>
+          <span class="start-trail start-trail-6"></span>
+
+          <span class="start-bullet start-bullet-1"></span>
+          <span class="start-bullet start-bullet-2"></span>
+          <span class="start-bullet start-bullet-3"></span>
+          <span class="start-bullet start-bullet-4"></span>
+          <span class="start-bullet start-bullet-5"></span>
+          <span class="start-bullet start-bullet-6"></span>
+
+          <div class="start-hunter-placeholder">
+            <span class="start-hunter-shadow"></span>
+            <span class="start-hunter-head"></span>
+            <span class="start-hunter-body"></span>
+            <span class="start-hunter-arm start-hunter-arm-left"></span>
+            <span class="start-hunter-arm start-hunter-arm-right"></span>
+            <span class="start-hunter-leg start-hunter-leg-left"></span>
+            <span class="start-hunter-leg start-hunter-leg-right"></span>
+            <span class="start-hunter-core"></span>
+          </div>
+
+          <span class="start-magnetic-flash"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="weapon-select-screen" class="weapon-screen" hidden aria-label="武器选择">
+      <header class="weapon-screen-header">
+        <button id="weapon-select-back" class="back-button" type="button" aria-label="返回" title="返回">
+          <span class="back-mark" aria-hidden="true"></span>
+        </button>
+        <strong>选择武器</strong>
+        <span id="last-weapon-label" class="last-weapon-label"></span>
+      </header>
+      <div class="weapon-select-body">
+        <div id="weapon-list" class="weapon-list"></div>
+        <div class="quick-start-bar">
+          <span id="quick-start-weapon"></span>
+          <button id="quick-start-button" class="primary-button" type="button">使用上次武器开始</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="weapon-detail-screen" class="weapon-screen" hidden aria-label="武器详情">
+      <header class="weapon-screen-header">
+        <button id="weapon-detail-back" class="back-button" type="button" aria-label="返回武器选择" title="返回武器选择">
+          <span class="back-mark" aria-hidden="true"></span>
+        </button>
+        <strong id="weapon-detail-name"></strong>
+        <span></span>
+      </header>
+      <div class="weapon-detail-body">
+        <figure class="weapon-preview">
+          <canvas id="weapon-preview-canvas" width="640" height="300" aria-label="当前武器玩法演示"></canvas>
+          <figcaption id="weapon-play-description"></figcaption>
+        </figure>
+        <div class="weapon-detail-side">
+          <section class="weapon-attributes" aria-label="武器属性">
+            <div id="weapon-attribute-list" class="weapon-attribute-list"></div>
+          </section>
+          <button id="select-weapon-button" class="primary-button" type="button">选择并开始</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="result-panel" class="panel result-panel" hidden>
+      <p id="result-kicker" class="panel-index">本轮结束</p>
+      <h2 id="result-title">战斗结束</h2>
+      <p id="result-summary"></p>
+      <div id="result-breakdown" class="result-breakdown"></div>
+      <div id="result-upgrades" class="run-upgrades"></div>
+      <div class="result-actions">
+        <button id="share-playtest-button" class="secondary-button" type="button">分享测试报告</button>
+        <button id="restart-button" class="primary-button" type="button">重新开始</button>
+      </div>
+    </section>
+
+    <section id="upgrade-screen" class="upgrade-screen" hidden aria-label="局内升级选择">
+      <header class="upgrade-header">
+        <span id="upgrade-time-label">25秒升级</span>
+        <strong>选择一项能力</strong>
+        <span>战斗已冻结</span>
+      </header>
+      <div id="upgrade-options" class="upgrade-options"></div>
+    </section>
+
+    <section id="upgrade-detail-screen" class="upgrade-detail-screen" hidden aria-label="升级详情">
+      <header class="upgrade-header">
+        <button id="upgrade-detail-back" class="back-button" type="button" aria-label="返回升级选择" title="返回升级选择">
+          <span class="back-mark" aria-hidden="true"></span>
+        </button>
+        <strong id="upgrade-detail-name"></strong>
+        <span>能力详情</span>
+      </header>
+      <div class="upgrade-detail-body">
+        <video id="upgrade-preview-video" class="upgrade-preview-media" playsinline muted loop preload="metadata" aria-label="能力效果循环演示"></video>
+        <canvas id="upgrade-preview-canvas" width="640" height="260" aria-label="能力效果循环演示" hidden></canvas>
+        <div id="upgrade-detail-copy" class="upgrade-detail-copy"></div>
+      </div>
+    </section>
+
+    <section id="records-screen" class="records-screen" hidden aria-label="个人记录">
+      <header class="upgrade-header">
+        <button id="records-back" class="back-button" type="button" aria-label="返回" title="返回">
+          <span class="back-mark" aria-hidden="true"></span>
+        </button>
+        <strong>个人记录</strong>
+        <span>仅保存在本机</span>
+      </header>
+      <div class="records-body">
+        <section>
+          <h2>武器最佳记录</h2>
+          <div id="weapon-records" class="record-list"></div>
+        </section>
+        <section>
+          <h2>最佳对局</h2>
+          <div id="best-runs" class="record-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="pause-panel" class="panel pause-panel" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden>
+      <header class="pause-heading">
+        <p class="panel-index">暂停</p>
+        <h2 id="pause-title">战斗已暂停</h2>
+      </header>
+      <div class="volume-control">
+        <div class="volume-control-header">
+          <label for="music-volume">音乐音量</label>
+          <output id="music-volume-value" for="music-volume">70%</output>
+        </div>
+        <input id="music-volume" type="range" min="0" max="100" step="1" value="70" aria-label="音乐音量">
+      </div>
+      <div class="volume-control">
+        <div class="volume-control-header">
+          <label for="sfx-volume">音效音量</label>
+          <output id="sfx-volume-value" for="sfx-volume">70%</output>
+        </div>
+        <input id="sfx-volume" type="range" min="0" max="100" step="1" value="70" aria-label="音效音量">
+      </div>
+      <div class="pause-upgrades">
+        <strong>本局升级</strong>
+        <div id="pause-upgrade-list" class="run-upgrades"></div>
+      </div>
+      <div class="pause-actions">
+        <button id="resume-button" class="primary-button" type="button">继续游戏</button>
+        <button id="exit-run-button" class="secondary-button" type="button">退出本局</button>
+      </div>
+    </section>
+
+    <section id="exit-confirm-panel" class="panel exit-confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="exit-confirm-title" aria-describedby="exit-confirm-description" hidden>
+      <p class="panel-index">退出本局</p>
+      <h2 id="exit-confirm-title">确认退出？</h2>
+      <p id="exit-confirm-description">当前战斗进度不会保留。</p>
+      <div class="confirm-actions">
+        <button id="cancel-exit-button" class="secondary-button" type="button">取消</button>
+        <button id="confirm-exit-button" class="primary-button danger-button" type="button">确认退出</button>
+      </div>
+    </section>
+
+  </main>
+  <script src="game.js?v=local-20260719-mobile-entry-2"></script>
+</body>
+</html>

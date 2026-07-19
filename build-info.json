@@ -1,0 +1,23 @@
+{
+  "build": "local-20260719-mobile-entry-2",
+  "publishedAs": "recall-playtest-20260719-2",
+  "title": "回膛：磁弹猎人",
+  "stage": "Graybox prototype / Gate 2 fail pending real WeChat retest",
+  "runSeconds": 180,
+  "sha256": {
+    "index.html": "7091D91C7B35321590A965873974E1E4A362D64E4D2683277CCDB993E4564831",
+    "styles.css": "6EABE1A124675F2BE474A35425FBCF1C8186B28AFC2EADECE631CF4B7D106179",
+    "game.js": "9B2D2344C75125392852B66985B5FCA9C8C50907AD037484C837CCA2419383AD"
+  },
+  "features": {
+    "startScreenUI": true,
+    "wechatVirtualLandscape": true,
+    "floatingMoveJoystick": true,
+    "threeBulletMagneticField": true,
+    "magneticFieldAngleRequirement": false,
+    "sharePlaytestReport": true,
+    "mobileEntryButtonPinned": true,
+    "compactWechatViewportCoverage": true,
+    "realPointerEntryFlowTest": true
+  }
+}
