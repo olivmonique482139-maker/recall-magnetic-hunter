@@ -100,11 +100,11 @@
   };
 
   const MUSIC_TRACKS = {
-    selection: { src: "audio_demos/scene_pack_v4/selection_opening_v4.wav", loop: true },
-    combat: { src: "audio_demos/scene_pack_v4/combat_forward_motion_v4.wav", loop: true },
-    boss: { src: "audio_demos/scene_pack_v4/boss_weight_and_space_v4.wav", loop: true },
-    victory: { src: "audio_demos/scene_pack_v4/victory_bright_release_v4.wav", loop: false },
-    results: { src: "audio_demos/scene_pack_v4/results_calm_return_v4.wav", loop: true }
+    selection: { src: "audio_demos/scene_pack_v4/selection_opening_v4.mp3", loop: true },
+    combat: { src: "audio_demos/scene_pack_v4/combat_forward_motion_v4.mp3", loop: true },
+    boss: { src: "audio_demos/scene_pack_v4/boss_weight_and_space_v4.mp3", loop: true },
+    victory: { src: "audio_demos/scene_pack_v4/victory_bright_release_v4.mp3", loop: false },
+    results: { src: "audio_demos/scene_pack_v4/results_calm_return_v4.mp3", loop: true }
   };
 
   const UPGRADE_PREVIEW_VIDEOS = {
@@ -654,7 +654,8 @@
   const musicPlayers = Object.fromEntries(Object.entries(MUSIC_TRACKS).map(([id, track]) => {
     const audio = new Audio(track.src);
     audio.loop = track.loop;
-    audio.preload = id === "selection" ? "auto" : "none";
+    audio.preload = "auto";
+    audio.playsInline = true;
     return [id, audio];
   }));
   let musicState = "selection";
@@ -662,6 +663,24 @@
   let musicSuspended = false;
   let musicBaseGain = (DEFAULT_MUSIC_VOLUME / 100) ** 2;
   let musicDuck = null;
+  let musicPlayGeneration = 0;
+  let musicRetryCount = 0;
+  let musicRetryTimer = null;
+  const MAX_MUSIC_RETRIES = 3;
+  const musicRetryDelays = [250, 750, 1500];
+  const audioDiagnostics = {
+    assetsPrimed: false,
+    primedSourceCount: 0,
+    musicPlayAttempts: 0,
+    musicPlaySuccesses: 0,
+    musicPlayFailures: 0,
+    musicRetries: 0,
+    lastMusicFailure: null,
+    sfxPlayFailures: 0,
+    sfxPlayAborts: 0,
+    lastSfxFailure: null
+  };
+  const primedAudioAssets = [];
   let sfxGain = (DEFAULT_SFX_VOLUME / 100) ** 2;
   const sfxCursors = new Map();
   const MAX_SFX_VOICES = 20;
@@ -862,6 +881,100 @@
     return Number.isFinite(parsedValue) ? clamp(parsedValue, 0, 100) : DEFAULT_SFX_VOLUME;
   }
 
+  function describeMediaFailure(error, audio, id) {
+    return {
+      id,
+      name: error?.name || "MediaError",
+      message: error?.message || audio?.error?.message || "unknown media failure",
+      code: audio?.error?.code || null,
+      networkState: audio?.networkState ?? null,
+      readyState: audio?.readyState ?? null,
+      at: Math.round(performance.now())
+    };
+  }
+
+  function primeAudioAssets() {
+    if (audioDiagnostics.assetsPrimed) return;
+    audioDiagnostics.assetsPrimed = true;
+    Object.values(musicPlayers).forEach((audio) => {
+      audio.preload = "auto";
+      if (audio.networkState === HTMLMediaElement.NETWORK_EMPTY) audio.load();
+    });
+    const sources = [
+      ...Object.values(UI_SFX_TRACKS).map((variants) => variants[0]),
+      ...Object.values(SFX_TRACKS).map((variants) => variants[0])
+    ];
+    Array.from(new Set(sources)).forEach((source) => {
+      const audio = new Audio(source);
+      audio.preload = "auto";
+      audio.playsInline = true;
+      audio.load();
+      primedAudioAssets.push(audio);
+    });
+    audioDiagnostics.primedSourceCount = primedAudioAssets.length + Object.keys(musicPlayers).length;
+  }
+
+  function clearMusicRetry() {
+    if (musicRetryTimer !== null) {
+      window.clearTimeout(musicRetryTimer);
+      musicRetryTimer = null;
+    }
+  }
+
+  function scheduleMusicRetry(id, generation) {
+    if (generation !== musicPlayGeneration || id !== musicState || musicRetryCount >= MAX_MUSIC_RETRIES) return;
+    clearMusicRetry();
+    const delay = musicRetryDelays[musicRetryCount] ?? musicRetryDelays[musicRetryDelays.length - 1];
+    musicRetryCount += 1;
+    audioDiagnostics.musicRetries += 1;
+    musicRetryTimer = window.setTimeout(() => {
+      musicRetryTimer = null;
+      if (generation !== musicPlayGeneration || id !== musicState) return;
+      const audio = musicPlayers[id];
+      if (audio.error || audio.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) audio.load();
+      void attemptMusicPlayback(id, generation, "retry");
+    }, delay);
+  }
+
+  function attemptMusicPlayback(id, generation, reason) {
+    if (!musicUnlocked || musicSuspended || paused || upgradeChoiceActive || document.hidden) return Promise.resolve(false);
+    const audio = musicPlayers[id];
+    if (!audio || generation !== musicPlayGeneration || id !== musicState) return Promise.resolve(false);
+    audioDiagnostics.musicPlayAttempts += 1;
+    let playback;
+    try {
+      playback = audio.play();
+    } catch (error) {
+      playback = Promise.reject(error);
+    }
+    return Promise.resolve(playback).then(() => {
+      if (generation !== musicPlayGeneration || id !== musicState) return false;
+      clearMusicRetry();
+      musicRetryCount = 0;
+      audioDiagnostics.musicPlaySuccesses += 1;
+      audioDiagnostics.lastMusicFailure = null;
+      return true;
+    }).catch((error) => {
+      if (generation !== musicPlayGeneration || id !== musicState) return false;
+      const failure = describeMediaFailure(error, audio, id);
+      failure.reason = reason;
+      audioDiagnostics.musicPlayFailures += 1;
+      audioDiagnostics.lastMusicFailure = failure;
+      if (failure.name === "NotAllowedError") musicUnlocked = false;
+      else scheduleMusicRetry(id, generation);
+      return false;
+    });
+  }
+
+  function recordSfxPlaybackFailure(error, audio, id) {
+    const failure = describeMediaFailure(error, audio, id);
+    if (failure.name === "AbortError") audioDiagnostics.sfxPlayAborts += 1;
+    else {
+      audioDiagnostics.sfxPlayFailures += 1;
+      audioDiagnostics.lastSfxFailure = failure;
+    }
+  }
+
   function setMusicVolume(value, persist = true) {
     const normalizedValue = Math.round(clamp(Number(value) || 0, 0, 100));
     musicVolume.value = String(normalizedValue);
@@ -923,6 +1036,7 @@
   }
 
   function pauseAllMusic() {
+    clearMusicRetry();
     Object.values(musicPlayers).forEach((audio) => audio.pause());
   }
 
@@ -982,18 +1096,22 @@
     voice.id = id;
     voice.priority = contract.priority;
     voice.startedAt = now;
-    audio.onended = () => {
+    const releaseVoice = () => {
       if (voice.token !== token) return;
       voice.busy = false;
       voice.id = null;
       voice.priority = -Infinity;
       voice.startedAt = 0;
     };
-    audio.onerror = audio.onended;
+    audio.onended = releaseVoice;
+    audio.onerror = releaseVoice;
     audio.volume = clamp(volume, 0, 1) * sfxGain;
     audio.src = sources[cursor % sources.length];
     audio.currentTime = 0;
-    audio.play().catch(() => audio.onended());
+    audio.play().catch((error) => {
+      recordSfxPlaybackFailure(error, audio, id);
+      releaseVoice();
+    });
   }
 
   function playUiSfx(id) {
@@ -1022,17 +1140,21 @@
     voice.id = id;
     voice.startedAt = now;
     const media = voice.audio;
-    media.onended = () => {
+    const releaseVoice = () => {
       if (voice.token !== token) return;
       voice.busy = false;
       voice.id = null;
       voice.startedAt = 0;
     };
-    media.onerror = media.onended;
+    media.onended = releaseVoice;
+    media.onerror = releaseVoice;
     media.volume = contract.volume * sfxGain;
     media.src = sources[cursor % sources.length];
     media.currentTime = 0;
-    media.play().catch(() => media.onended());
+    media.play().catch((error) => {
+      recordSfxPlaybackFailure(error, media, id);
+      releaseVoice();
+    });
     if (contract.duckProfile) {
       uiDuckRequestId += 1;
       duckMusicForRecall(contract.duckProfile, `ui:${id}:${uiDuckRequestId}`);
@@ -1077,28 +1199,26 @@
     if (!musicPlayers[nextState]) return;
     const previousState = musicState;
     musicState = nextState;
+    musicPlayGeneration += 1;
+    musicRetryCount = 0;
+    clearMusicRetry();
     Object.entries(musicPlayers).forEach(([id, audio]) => {
       if (id !== nextState) audio.pause();
     });
     const audio = musicPlayers[nextState];
     if (restart || previousState !== nextState || audio.ended) audio.currentTime = 0;
     if (!musicUnlocked || musicSuspended || paused || upgradeChoiceActive || document.hidden) return;
-    audio.play().catch(() => {});
+    void attemptMusicPlayback(nextState, musicPlayGeneration, "state-change");
   }
 
-  function resumeCurrentMusic() {
-    if (!musicUnlocked || musicSuspended || paused || upgradeChoiceActive || document.hidden) return;
-    const audio = musicPlayers[musicState];
-    if (audio) audio.play().catch(() => {});
+  function resumeCurrentMusic(reason = "resume") {
+    return attemptMusicPlayback(musicState, musicPlayGeneration, reason);
   }
 
   function unlockMusic() {
-    if (musicUnlocked) {
-      resumeCurrentMusic();
-      return;
-    }
+    primeAudioAssets();
     musicUnlocked = true;
-    resumeCurrentMusic();
+    void resumeCurrentMusic("trusted-gesture");
   }
 
   function readPersonalRecords() {
@@ -5392,7 +5512,18 @@
             depthDb: musicDuck.depthDb
           } : null,
           volume: musicPlayers[musicState]?.volume ?? 0,
-          playing: Object.entries(musicPlayers).filter(([, audio]) => !audio.paused).map(([id]) => id)
+          playing: Object.entries(musicPlayers).filter(([, audio]) => !audio.paused).map(([id]) => id),
+          diagnostics: { ...audioDiagnostics },
+          tracks: Object.fromEntries(Object.entries(musicPlayers).map(([id, audio]) => [id, {
+            src: audio.currentSrc || audio.src,
+            paused: audio.paused,
+            ended: audio.ended,
+            currentTime: Number.isFinite(audio.currentTime) ? Number(audio.currentTime.toFixed(3)) : 0,
+            duration: Number.isFinite(audio.duration) ? Number(audio.duration.toFixed(3)) : null,
+            readyState: audio.readyState,
+            networkState: audio.networkState,
+            error: audio.error ? { code: audio.error.code, message: audio.error.message } : null
+          }]))
         },
         sfx: {
           gain: sfxGain,

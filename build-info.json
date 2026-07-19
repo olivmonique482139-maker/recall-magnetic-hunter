@@ -1,23 +1,21 @@
 {
-  "build": "local-20260719-mobile-entry-2",
-  "publishedAs": "recall-playtest-20260719-2",
+  "build": "local-20260719-audio-reliability-3",
+  "publishedAs": "github-pages-main",
   "title": "回膛：磁弹猎人",
   "stage": "Graybox prototype / Gate 2 fail pending real WeChat retest",
   "runSeconds": 180,
   "sha256": {
-    "index.html": "7091D91C7B35321590A965873974E1E4A362D64E4D2683277CCDB993E4564831",
+    "index.html": "DDDF2AE9FF52389404C46E5685A33A263988DF07890DE896E7DE53C9CEB3CD8D",
     "styles.css": "6EABE1A124675F2BE474A35425FBCF1C8186B28AFC2EADECE631CF4B7D106179",
-    "game.js": "9B2D2344C75125392852B66985B5FCA9C8C50907AD037484C837CCA2419383AD"
+    "game.js": "5E397AB9527DE9555567B740FED7C81941A532AD991D504083C76CCB01454892"
   },
   "features": {
-    "startScreenUI": true,
     "wechatVirtualLandscape": true,
-    "floatingMoveJoystick": true,
-    "threeBulletMagneticField": true,
-    "magneticFieldAngleRequirement": false,
-    "sharePlaytestReport": true,
     "mobileEntryButtonPinned": true,
-    "compactWechatViewportCoverage": true,
-    "realPointerEntryFlowTest": true
+    "musicMp3PayloadReduction": true,
+    "trustedGestureAudioPriming": true,
+    "musicPlaybackRetry": true,
+    "audioLifecycleDiagnostics": true,
+    "audioReliabilityStressTest": true
   }
 }
