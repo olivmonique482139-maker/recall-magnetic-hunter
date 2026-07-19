@@ -652,7 +652,8 @@
   }
 
   const musicPlayers = Object.fromEntries(Object.entries(MUSIC_TRACKS).map(([id, track]) => {
-    const audio = new Audio(track.src);
+    const audio = new Audio(resolveAudioSource(track.src));
+    audio.__debugSource = track.src;
     audio.loop = track.loop;
     audio.preload = id === "selection" ? "auto" : "none";
     audio.playsInline = true;
@@ -922,7 +923,7 @@
   }
 
   function resolveAudioSource(source) {
-    return window.__CRITICAL_AUDIO_DATA__?.[source] || source;
+    return window.__CORE_MUSIC_DATA__?.[source] || window.__CRITICAL_AUDIO_DATA__?.[source] || source;
   }
 
   function clearMusicRetry() {
@@ -5557,7 +5558,7 @@
           playing: Object.entries(musicPlayers).filter(([, audio]) => !audio.paused).map(([id]) => id),
           diagnostics: { ...audioDiagnostics },
           tracks: Object.fromEntries(Object.entries(musicPlayers).map(([id, audio]) => [id, {
-            src: audio.currentSrc || audio.src,
+            src: audio.__debugSource || audio.currentSrc || audio.src,
             paused: audio.paused,
             ended: audio.ended,
             currentTime: Number.isFinite(audio.currentTime) ? Number(audio.currentTime.toFixed(3)) : 0,

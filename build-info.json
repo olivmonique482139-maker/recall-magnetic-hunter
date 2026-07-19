@@ -1,14 +1,15 @@
 {
-  "build": "local-20260719-audio-reliability-7",
+  "build": "local-20260719-audio-reliability-8",
   "publishedAs": "github-pages-main",
   "title": "回膛：磁弹猎人",
   "stage": "Graybox prototype / Gate 2 fail pending real WeChat retest",
   "runSeconds": 180,
   "sha256": {
-    "index.html": "DE722DEA35ECAC4445FDA03D9FCE7E37A77E82F5F9956470993A75A6FCC26F0B",
+    "index.html": "7D399A249A064999057EC9FED36A3D0D991F1D6BCF4056E0B55C022E6308ED95",
     "styles.css": "6EABE1A124675F2BE474A35425FBCF1C8186B28AFC2EADECE631CF4B7D106179",
-    "game.js": "90AADD03429223DA282C564D5FB5ABC0540E43FF843081CB50CCDF1DF63AA30D",
-    "critical_audio.js": "848343850EC7389ED5CD1573D6B29D0693890A4E018E90D3CAFEC7855E0C977E"
+    "game.js": "A468F85C4E51E97089FB43DECF066475EAE2C97A011A171AB7AB9A4A4D1F1BAF",
+    "critical_audio.js": "848343850EC7389ED5CD1573D6B29D0693890A4E018E90D3CAFEC7855E0C977E",
+    "core_music.js": "E0E66AA8836D465D3F62D229CFF89690305A5832747C9E2F618D2ACDEB9E41B1"
   },
   "features": {
     "wechatVirtualLandscape": true,
@@ -18,6 +19,7 @@
     "primedResourceCount": 17,
     "embeddedCriticalSfx": true,
     "musicProgressWatchdog": true,
+    "embeddedCoreMusic": true,
     "musicPlaybackRetry": true,
     "audioLifecycleDiagnostics": true,
     "audioReliabilityStressTest": true
