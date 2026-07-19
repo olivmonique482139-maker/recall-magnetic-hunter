@@ -908,13 +908,17 @@
       ...SFX_TRACKS.impactEnemy
     ];
     Array.from(new Set(sources)).forEach((source) => {
-      const audio = new Audio(source);
+      const audio = new Audio(resolveAudioSource(source));
       audio.preload = "auto";
       audio.playsInline = true;
       audio.load();
       primedAudioAssets.push(audio);
     });
     audioDiagnostics.primedSourceCount = primedAudioAssets.length + 2;
+  }
+
+  function resolveAudioSource(source) {
+    return window.__CRITICAL_AUDIO_DATA__?.[source] || source;
   }
 
   function clearMusicRetry() {
@@ -1109,7 +1113,7 @@
     audio.onended = releaseVoice;
     audio.onerror = releaseVoice;
     audio.volume = clamp(volume, 0, 1) * sfxGain;
-    audio.src = sources[cursor % sources.length];
+    audio.src = resolveAudioSource(sources[cursor % sources.length]);
     audio.currentTime = 0;
     audio.play().catch((error) => {
       recordSfxPlaybackFailure(error, audio, id);
@@ -1152,7 +1156,7 @@
     media.onended = releaseVoice;
     media.onerror = releaseVoice;
     media.volume = contract.volume * sfxGain;
-    media.src = sources[cursor % sources.length];
+    media.src = resolveAudioSource(sources[cursor % sources.length]);
     media.currentTime = 0;
     media.play().catch((error) => {
       recordSfxPlaybackFailure(error, media, id);
