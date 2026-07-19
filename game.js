@@ -666,7 +666,10 @@
   let musicPlayGeneration = 0;
   let musicRetryCount = 0;
   let musicRetryTimer = null;
+  let musicStallTimer = null;
+  let musicStallRecoveryCount = 0;
   const MAX_MUSIC_RETRIES = 3;
+  const MAX_MUSIC_STALL_RECOVERIES = 2;
   const musicRetryDelays = [250, 750, 1500];
   const audioDiagnostics = {
     assetsPrimed: false,
@@ -675,6 +678,7 @@
     musicPlaySuccesses: 0,
     musicPlayFailures: 0,
     musicRetries: 0,
+    musicStallRecoveries: 0,
     lastMusicFailure: null,
     sfxPlayFailures: 0,
     sfxPlayAborts: 0,
@@ -928,6 +932,33 @@
     }
   }
 
+  function clearMusicStallWatchdog() {
+    if (musicStallTimer !== null) {
+      window.clearTimeout(musicStallTimer);
+      musicStallTimer = null;
+    }
+  }
+
+  function watchMusicProgress(id, generation, startTime) {
+    clearMusicStallWatchdog();
+    musicStallTimer = window.setTimeout(() => {
+      musicStallTimer = null;
+      if (generation !== musicPlayGeneration || id !== musicState || musicSuspended || paused || upgradeChoiceActive || document.hidden) return;
+      const audio = musicPlayers[id];
+      if (!audio || audio.paused || audio.ended) return;
+      if (audio.currentTime > startTime + 0.08) {
+        musicStallRecoveryCount = 0;
+        return;
+      }
+      if (musicStallRecoveryCount >= MAX_MUSIC_STALL_RECOVERIES) return;
+      musicStallRecoveryCount += 1;
+      audioDiagnostics.musicStallRecoveries += 1;
+      audio.pause();
+      audio.load();
+      void attemptMusicPlayback(id, generation, "stall-recovery");
+    }, 2500);
+  }
+
   function scheduleMusicRetry(id, generation) {
     if (generation !== musicPlayGeneration || id !== musicState || musicRetryCount >= MAX_MUSIC_RETRIES) return;
     clearMusicRetry();
@@ -960,6 +991,7 @@
       musicRetryCount = 0;
       audioDiagnostics.musicPlaySuccesses += 1;
       audioDiagnostics.lastMusicFailure = null;
+      watchMusicProgress(id, generation, audio.currentTime);
       return true;
     }).catch((error) => {
       if (generation !== musicPlayGeneration || id !== musicState) return false;
@@ -1044,6 +1076,7 @@
 
   function pauseAllMusic() {
     clearMusicRetry();
+    clearMusicStallWatchdog();
     Object.values(musicPlayers).forEach((audio) => audio.pause());
   }
 
@@ -1208,7 +1241,9 @@
     musicState = nextState;
     musicPlayGeneration += 1;
     musicRetryCount = 0;
+    musicStallRecoveryCount = 0;
     clearMusicRetry();
+    clearMusicStallWatchdog();
     Object.entries(musicPlayers).forEach(([id, audio]) => {
       if (id !== nextState) audio.pause();
     });
