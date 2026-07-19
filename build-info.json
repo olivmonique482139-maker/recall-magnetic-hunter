@@ -1,19 +1,20 @@
 {
-  "build": "local-20260719-audio-reliability-3",
+  "build": "local-20260719-audio-reliability-4",
   "publishedAs": "github-pages-main",
   "title": "回膛：磁弹猎人",
   "stage": "Graybox prototype / Gate 2 fail pending real WeChat retest",
   "runSeconds": 180,
   "sha256": {
-    "index.html": "DDDF2AE9FF52389404C46E5685A33A263988DF07890DE896E7DE53C9CEB3CD8D",
+    "index.html": "32685C829203EF7E897247D124B4F313D159B8597C37AF6E0745CD6D1B4F3445",
     "styles.css": "6EABE1A124675F2BE474A35425FBCF1C8186B28AFC2EADECE631CF4B7D106179",
-    "game.js": "5E397AB9527DE9555567B740FED7C81941A532AD991D504083C76CCB01454892"
+    "game.js": "B788433C1180B004196481817117B74FFC8746FE4A1CDCA63D749F1D1466DC32"
   },
   "features": {
     "wechatVirtualLandscape": true,
     "mobileEntryButtonPinned": true,
     "musicMp3PayloadReduction": true,
-    "trustedGestureAudioPriming": true,
+    "priorityAudioPriming": true,
+    "primedResourceCount": 7,
     "musicPlaybackRetry": true,
     "audioLifecycleDiagnostics": true,
     "audioReliabilityStressTest": true

@@ -654,7 +654,7 @@
   const musicPlayers = Object.fromEntries(Object.entries(MUSIC_TRACKS).map(([id, track]) => {
     const audio = new Audio(track.src);
     audio.loop = track.loop;
-    audio.preload = "auto";
+    audio.preload = id === "selection" ? "auto" : "none";
     audio.playsInline = true;
     return [id, audio];
   }));
@@ -896,13 +896,16 @@
   function primeAudioAssets() {
     if (audioDiagnostics.assetsPrimed) return;
     audioDiagnostics.assetsPrimed = true;
-    Object.values(musicPlayers).forEach((audio) => {
+    [musicPlayers.selection, musicPlayers.combat].forEach((audio) => {
       audio.preload = "auto";
       if (audio.networkState === HTMLMediaElement.NETWORK_EMPTY) audio.load();
     });
     const sources = [
-      ...Object.values(UI_SFX_TRACKS).map((variants) => variants[0]),
-      ...Object.values(SFX_TRACKS).map((variants) => variants[0])
+      UI_SFX_TRACKS.uiStart[0],
+      UI_SFX_TRACKS.uiWeaponSelect[0],
+      SFX_TRACKS.shot[0],
+      SFX_TRACKS.recallStart[0],
+      SFX_TRACKS.impactEnemy[0]
     ];
     Array.from(new Set(sources)).forEach((source) => {
       const audio = new Audio(source);
@@ -911,7 +914,7 @@
       audio.load();
       primedAudioAssets.push(audio);
     });
-    audioDiagnostics.primedSourceCount = primedAudioAssets.length + Object.keys(musicPlayers).length;
+    audioDiagnostics.primedSourceCount = primedAudioAssets.length + 2;
   }
 
   function clearMusicRetry() {
